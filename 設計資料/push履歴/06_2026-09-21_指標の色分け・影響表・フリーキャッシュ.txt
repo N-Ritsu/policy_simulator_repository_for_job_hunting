@@ -2,7 +2,7 @@
 ==========================================
 
 ■ 基本情報
-- コミット: (このpushで作成。IDはgit logを参照)
+- コミット: 9039ee7
 - 日付: 2026-09-21
 - メッセージ: Add indicator coloring, per-indicator effect table and free_cash indicator
 
