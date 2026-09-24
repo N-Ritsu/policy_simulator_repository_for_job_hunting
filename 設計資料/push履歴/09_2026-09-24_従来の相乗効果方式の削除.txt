@@ -1,0 +1,52 @@
+09 従来の相乗効果方式(AI方式)の削除
+======================================
+
+■ 基本情報
+- コミット: 2c2b6b4
+- 日付: 2026-09-24
+- メッセージ: Remove the AI-judged synergy method; keep only the purpose/means rule table
+
+■ 概要
+08で、過去の政策との相乗効果・混乱を「目的・手段の組み合わせ表」で決める方式(ルール方式)を導入し、
+AIが直接値を出す従来の方式(AI方式)と比較できるようにした。比較の結果、ルール方式を採用することに決めたので、
+AI方式とその比較の仕組みを削除した。
+
+■ 変更内容
+1. AIの出力とプロンプト
+   - 出力項目 past_policy_synergy / past_policy_disruption(AIが直接出す相乗・混乱の値)を削除。
+     出力は purpose・means・positive_impacts・negative_impacts・era_background・foreign_reactions の6項目。
+   - 相乗・混乱の値の説明と、過去の政策との関係の種類(ベビーシッターの例)の説明を削除。
+     代わりに「相乗・重複・矛盾はゲーム側で計算するので、各影響の大きさには織り込まない。
+     ただし前提となる制度や体制が整わないまま急に大規模に行うことによる混乱は、その政策自身の悪い影響に含める」と指示。
+   - レポートの書き方から、「過去の政策との関係と矛盾しないように」を外した(関係はゲーム側が決めるため)。
+   - これにより、政策評価のシステムプロンプトは約6,100→約5,500文字(約1割短縮)。出力も毎ターン2項目分減る。
+2. エンジン(game/simulation.py)
+   - 方式の切り替え(synergy_method、SYNERGY_METHODS)、AI方式の値の記録、方式ごとの影響量の比較
+     (IndicatorComparison)を削除。相乗・混乱は常に game/synergy.py の組み合わせ表で決める。
+   - PolicyReport は、相乗・混乱の値(synergy / disruption)、目的・手段、理由(synergy_reasons)だけを持つ。
+3. 画面(app.py)
+   - 開発者用の方式比較の表示(政策ごと・ゲーム全体)を削除。
+   - プレイヤー向けの「政策の分類」と「過去の政策との関係(値と理由)」の表示は残した。
+4. その他
+   - 検証スクリプト tools/compare_synergy.py と、その結果の保存先(.gitignore の記載)を削除。
+     比較の結果の要点は 08 に残している。
+   - .env.example の SYNERGY_METHOD、README・JSON定義案(policy_evaluation.txt)の該当箇所を削除・更新。
+5. 08 の変更履歴にコミットID(41604fc)を記入。
+
+■ 確認したこと
+- スキーマは3社共通の制約(全項目required・additionalProperties:false)を満たす。
+- プロンプトに相乗・混乱の値やベビーシッターの例の記述が残っていない。
+- 画面(通常表示・開発者表示)で2ターン進め、エラーなし。施設整備→給付の組み合わせで相乗+2・混乱−1が付き、
+  理由が表示され、効果の倍率(良い影響×1.3、一時的な悪影響×0.85)が正しく掛かる。
+- 実際のAPIは呼んでいない(出力項目を減らしただけで、分類の実測は08で10/10件想定どおり)。
+
+■ 補足
+- クリア条件は、プラスに偏りがちだったAI方式の値で調整したもの。ルール方式では相乗が小さめになるため、
+  難易度が上がる可能性があり、再確認が必要。
+- 公開リポジトリ(設計資料のみ)には、07・08を反映済み(cac7166)。09は次の反映時に追加する。
+
+■ 変更ファイル
+- 修正: app.py, game/simulation.py, game/prompts.py, game/synergy.py, README.md, .env.example, .gitignore,
+        設計資料/9_13_JSONスキーマ定義案/policy_evaluation.txt, 設計資料/push履歴/08_...(コミットID), README.txt
+- 削除: tools/compare_synergy.py
+- 新規: 設計資料/push履歴/09_...(このファイル)
