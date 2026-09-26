@@ -1,6 +1,7 @@
 {
   "purpose": "少子化対策・子育て", // 政策の主な目的（16種の選択肢から1つ）
   "means": "公共投資・施設整備", // 政策の主な手段（12種の選択肢から1つ）。目的・手段と過去の政策の分類から、エンジンが過去の政策との相乗・混乱を組み合わせ表で決める（以前のAIが直接出す past_policy_synergy / past_policy_disruption は廃止）
+  "fiscal_basis": "学校数約3万校×平均約1,700万円=約0.5兆円", // 費用・増減収の金額の概算の根拠（1文。金額を決める前に書かせる）
   "one_time_cost": 0.5, // 今年だけかかる一時的な費用（兆円。例: 学校設備に5000億円なら0.5）。一時的な収入はマイナス
   "recurring_cost_change": 0.3, // 毎年かかり続ける費用の増減（兆円/年。例: 給食の無償化）。歳出削減はマイナス
   "consumption_tax_rate_change": 0, // 消費税率の変更（ポイント）。消費税収はエンジンが税率×GDPから計算する
@@ -11,7 +12,7 @@
   "positive_impacts": [
     {
       "description": "保育所増設で女性の就労が増加", // ①影響の見出し（20文字以内。計算には使わず、翌年以降のAIに渡す「進行中の効果」の見出しになる）
-      "target_indicators": ["birth_rate", "gdp", "tax_revenue"], // ②影響が及ぶ指標（1～3個）
+      "target_indicators": ["birth_rate", "gdp_growth_rate", "working_age_ratio"], // ②影響が及ぶ指標（1～3個）。GDP・税収・財政の指標はエンジンが計算するので選べない
       "peak_year": 5, // ③ピーク（正規分布の平均μ：例は5年後）
       "duration": "long", // ④期間のばらつき（short, medium, long から選択、σに該当）
       "persistence": "permanent", // ⑤効果の残り方（permanent:効果が残り続ける / temporary:一時的でやがて元に戻る）
