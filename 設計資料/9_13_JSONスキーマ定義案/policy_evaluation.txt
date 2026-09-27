@@ -12,7 +12,7 @@
   "positive_impacts": [
     {
       "description": "保育所増設で女性の就労が増加", // ①影響の見出し（20文字以内。計算には使わず、翌年以降のAIに渡す「進行中の効果」の見出しになる）
-      "target_indicators": ["birth_rate", "gdp_growth_rate", "working_age_ratio"], // ②影響が及ぶ指標（1～3個）。GDP・税収・財政の指標はエンジンが計算するので選べない
+      "target_indicators": ["birth_rate", "working_age_ratio", "marriage_rate"], // ②影響が及ぶ指標（1～3個）。GDP・潜在成長率・税収・財政の指標はエンジンが計算するので選べない。gdp_growth_rate への permanent の影響は反映されない（長期の成長は、働き手・企業収益・技術力などから計算する潜在成長率で決まる）
       "peak_year": 5, // ③ピーク（正規分布の平均μ：例は5年後）
       "duration": "long", // ④期間のばらつき（short, medium, long から選択、σに該当）
       "persistence": "permanent", // ⑤効果の残り方（permanent:効果が残り続ける / temporary:一時的でやがて元に戻る）
