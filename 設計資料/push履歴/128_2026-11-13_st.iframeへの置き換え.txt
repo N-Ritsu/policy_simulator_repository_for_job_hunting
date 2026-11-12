@@ -1,0 +1,85 @@
+128 st.iframe への置き換え
+===============================================
+
+■ 基本情報
+- コミット: ebe2af1
+- 日付: 2026-11-13
+- メッセージ: Replace components.html with st.iframe and pin Streamlit
+
+■ 概要
+ユーザーの依頼: Streamlit 1.64 で「`st.components.v1.html` を `st.iframe` に置き換えてください。
+`st.components.v1.html` は 2026-06-01 より後に削除されます」という警告が出ている。requirements.txt は
+`streamlit>=1.50` だけなので、公開先(Streamlit Community Cloud)を再起動したときに、components.html が消えた
+新しい版が入ると、コピーのボタン・エラーのときの読み込み直し(120)・チュートリアル(117)・動くグラフ(74)・
+演出の画面を一番上から見せる処理(98)が動かなくなる。調べて、置き換えてほしい。
+遊ぶ人から見た動きは変わらない(お知らせ(news.py)には載せていない)。
+
+■ 調べたこと(Streamlit 1.64 のソースと、公式の説明・リリースノート)
+- st.iframe は 1.56 で入った。形は st.iframe(src, *, width="stretch", height="content", tab_index=None)
+  (1.65 からは alt も)。src が URL でも / で始まる道筋でも Path でもなければ、HTML の文として srcdoc に入る。
+- 画面の側では components.html と同じ iframe の部品で描かれ、sandbox も同じ
+  (allow-same-origin・allow-scripts など)。チュートリアルとエラーの見張りが使う window.parent.document には、
+  これまでどおり手が届く。
+- 違いは2つ:
+  1. 高さ 0 を受け付けない(0 以下はエラー)。整数・"content"・"stretch" のみ。
+  2. scrolling の引数がなく、いつもスクロールできる(components.html の初期値は scrolling=False で、はみ出しは
+     切り取り・スクロールバーなし)。
+- components.v1.html は 1.64〜1.67(2026-11-05、今の最新)ではまだ消えていない。ただし期限(2026-06-01)は
+  過ぎているので、次の版で消えてもおかしくない。
+
+■ 変更内容
+1. app.py
+   - components.html の5か所を st.iframe にした(import streamlit.components.v1 も消した)。
+     - コピーのボタン(高さ 36)・動くグラフ(高さはこれまでどおり)は、そのまま st.iframe に。
+     - スクリプトだけの3か所(エラーの見張り・チュートリアル・演出の画面を一番上に戻す処理)は、高さ 0 が使えない
+       ので 1 にした。入れ物(.st-key-error_reload / tutorial_scroll / ceremony_top)は、もとから CSS で
+       大きさ 0・はみ出しを隠すようにしてあるので、画面の見た目は変わらない。
+2. game/ui_theme.py(コピーのボタン)・game/charts.py(動くグラフ)
+   - 中のページに html,body{overflow:hidden} を足した。st.iframe はいつもスクロールできるので、
+     これまでの scrolling=False と同じく、はみ出しても枠にスクロールバーが出ないようにするため。
+   - 説明の文の components.html を st.iframe に直した(game/tutorial_js.py も)。
+3. requirements.txt
+   - streamlit>=1.50 → streamlit>=1.64,<1.68。下は手元で使っている版、上は確かめた最新の 1.67 まで。
+
+■ 検討した案と判断
+【比べた案】
+  - スクリプトを差し込む3か所:
+    a. st.iframe(高さ 1)にして、入れ物を CSS で隠したままにする
+    b. st.iframe の height="content"(中身の高さに合わせる。スクリプトだけなら 0 に近くなるはず)
+    c. st.html(unsafe_allow_javascript=True)でページに直接スクリプトを入れ、iframe をやめる
+  - requirements.txt:
+    a. streamlit>=1.64,<1.68(確かめた範囲だけ)
+    b. streamlit==1.64.0(手元と同じ版に固定)
+    c. 上の限りを付けない(streamlit>=1.64)
+【決め手】
+  - スクリプトは a。今の作りは「中身が変わらなければ iframe が作り直されず、スクリプトは最初の一度だけ動く」
+    (120・117)ことに頼っている。c はこの点の動きが iframe と同じか分からず、作り直しが大きい。b は高さの
+    測り方しだいで余白が出るおそれがある。a は入れ物がもとから大きさ 0 なので、見た目も動きも変わらない。
+  - requirements.txt は a。置き換えたので components.html の削除では壊れなくなったが、st.iframe の動き
+    (sandbox など)が先の版で変わると、ページの側に手を入れる処理が壊れるおそれは残る。確かめていない版が
+    公開先に入らないよう、上を確かめた 1.67 までにした。b は 1.65〜1.67 の直しを取り込めないのでやめた。
+    新しい版が出たら、確かめてから上の限りを上げる。
+【決めた人】 ユーザー(置き換えること・版の範囲を決めること。範囲の形の例もユーザー)。範囲の上を 1.67 までに
+            したことと、スクリプトの差し込み方は Claude。
+
+■ 確かめたこと(作業用のコピーを、APIを呼ばないふりのサーバーにつないで動かした)
+- Streamlit 1.64.0 と 1.67.0(別の Python の環境に入れた)の両方で、次を確かめた:
+  - エラーの見張り: ページの側に見張りが入っている(window.__errReload)。[data-testid="stException"] の要素を
+    足すと、1.5秒ほどでページが読み込み直され、読み込み直しのあとも見張りがまた入る。
+  - コピーのボタン: 「政策をコピー」「報告書をコピー」を押すと「✓ コピーしました」に変わり、クリップボードに
+    政策の文・報告書の文(最後に #政策シミュレーション とURL)が渡る。枠の高さ 36、スクロールバーなし。
+  - 動くグラフ: 指標のカードを押した画面で、グラフが描かれ(animate 12個)、アニメーションの時計が進む。
+    枠の高さ 360、中身も 360 でスクロールバーなし。
+  - チュートリアル: 「❓ 遊び方」で始まり、次へ・戻るで段階が進み戻りし(1/9→4/9→3/9)、明るい枠が場所に
+    重なる。スキップで閉じる。
+  - スクリプトの入れ物は高さ 0 のまま。サーバーのログに components.html の警告が出ない。ブラウザのエラーもない。
+- 演出の画面を一番上に戻す処理(ceremony_top)は、年の区切りの演出を出すところまで進めていないので、画面では
+  試していない。中身は見張り・チュートリアルと同じ形(高さ 1 の st.iframe からページの側を触る)。
+
+■ 変更ファイル
+- 新規: 設計資料/push履歴/128_...(このファイル)
+- 修正: app.py, game/ui_theme.py, game/charts.py, game/tutorial_js.py, requirements.txt,
+  設計資料/判断の記録/01_技術と開発の進め方.txt, 設計資料/push履歴/README.txt
+
+■ 補足
+- Streamlit の新しい版(1.68 など)が出たら、同じことを確かめてから requirements.txt の上の限りを上げる。
