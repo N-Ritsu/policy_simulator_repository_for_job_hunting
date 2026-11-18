@@ -1,0 +1,44 @@
+137 更新の後に本番が ImportError になる問題の修正
+==============================================
+
+■ 基本情報
+- コミット: 442b36e
+- 日付: 2026-11-18
+- メッセージ: Reload stale game modules after an update to fix ImportError in production
+
+■ 概要
+ユーザーの報告: 本番(Streamlit Community Cloud)で「ImportError: This app has encountered an error...」と出る。
+アプリ内のブラウザで本番を開くと、app.py の `from game import money` から、game/money.py の
+`from game.indicators import JAPAN_MONEY_UNIT, MODES` で止まっていた。
+
+原因: 本番のサーバーが、更新前の game/indicators.py(JAPAN_MONEY_UNIT がない、130より前の版)を覚えたまま、新しい
+game/money.py(130で追加)を読み込もうとした。コードそのものの誤りではない(リポジトリをまっさらに取り出し直して動かすと、
+日本語・英語ともエラーなく動く)。サーバーを再起動するまで直らない状態だった。
+
+■ 変更内容
+1. game/__init__.py: パッケージを読み込んだ時刻(_LOADED_AT)を持つ。
+2. app.py: 毎回の表示の最初(game を読み込む前)に、game/ のファイルのうち最も新しい更新時刻が、読み込んだ時刻より新しければ、
+   game のモジュールをすべて忘れて読み込み直す(_drop_stale_game_modules)。ふだん(更新がないとき)は時刻を比べるだけ。
+3. 判断の記録/05(14-2.)。
+
+■ 検討した案と判断
+【比べた案】
+  - 管理画面でサーバーを再起動する(今回だけ直す) / 毎回すべて読み込み直す / ファイルが新しくなったときだけ読み込み直す
+【決め手】 判断の記録/05 の14-2.。再起動は人の手が要り、今後の更新でも同じことが起きうる。毎回の読み込み直しは遅くなる。
+
+■ 確かめたこと
+- リポジトリをまっさらに取り出し直したコードで、アプリを Streamlit の試験の仕組み(AppTest)で動かし、日本語・英語とも
+  エラーがない。
+- 本番と同じ状態を作った: 1回動かした後、game.indicators を JAPAN_MONEY_UNIT のない古い版に差し替え、game/money.py の
+  更新時刻を新しくして、もう一度動かす。
+  - 対策がないと: 本番と同じ ImportError(cannot import name 'JAPAN_MONEY_UNIT' from 'game.indicators')。
+  - 対策があると: エラーなく動き、game.indicators は新しい版に読み込み直される。
+- 日本の2つのモードの計算とAIへの指示は変わらない。構文の確かめ、改行はLF。
+
+■ 本番を直すには
+- この修正を push すると、本番の app.py が新しくなり、次の表示のときに古いモジュールが読み込み直される見込み。
+  それでも直らなければ、Streamlit の「Manage app」から「Reboot app」でサーバーを再起動する。
+
+■ 変更ファイル
+- 修正: app.py, game/__init__.py, 設計資料/判断の記録/05_課金と公開.txt, 設計資料/push履歴/README.txt
+- 新規: 設計資料/push履歴/137_...(このファイル)
